@@ -1,9 +1,8 @@
+import os
 from collections.abc import AsyncIterator, Iterator
 from uuid import UUID
 
 import pytest
-from langchain_core import __version__ as core_version
-from packaging import version
 from pytest_mock import MockerFixture
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
@@ -31,9 +30,53 @@ from tests.conftest_store import (
 
 pytest.register_assert_rewrite("tests.memory_assert")
 
-# TODO: fix this once core is released
-IS_LANGCHAIN_CORE_030_OR_GREATER = version.parse(core_version) >= version.parse(
-    "0.3.0.dev0"
+# Global variables for checkpointer and store configurations
+FAST_MODE = os.getenv("LANGGRAPH_TEST_FAST", "true").lower() in ("true", "1", "yes")
+
+SYNC_CHECKPOINTER_PARAMS = (
+    ["memory"]
+    if FAST_MODE
+    else [
+        "memory",
+        "sqlite",
+        "postgres",
+        "postgres_pipe",
+        "postgres_pool",
+    ]
+)
+
+ASYNC_CHECKPOINTER_PARAMS = (
+    ["memory"]
+    if FAST_MODE
+    else [
+        "memory",
+        "sqlite_aio",
+        "postgres_aio",
+        "postgres_aio_pipe",
+        "postgres_aio_pool",
+    ]
+)
+
+SYNC_STORE_PARAMS = (
+    ["in_memory"]
+    if FAST_MODE
+    else [
+        "in_memory",
+        "postgres",
+        "postgres_pipe",
+        "postgres_pool",
+    ]
+)
+
+ASYNC_STORE_PARAMS = (
+    ["in_memory"]
+    if FAST_MODE
+    else [
+        "in_memory",
+        "postgres_aio",
+        "postgres_aio_pipe",
+        "postgres_aio_pool",
+    ]
 )
 
 
@@ -55,7 +98,7 @@ def deterministic_uuids(mocker: MockerFixture) -> MockerFixture:
 
 @pytest.fixture(
     scope="function",
-    params=["in_memory", "postgres", "postgres_pipe", "postgres_pool"],
+    params=SYNC_STORE_PARAMS,
 )
 def sync_store(request: pytest.FixtureRequest) -> Iterator[BaseStore]:
     store_name = request.param
@@ -79,7 +122,7 @@ def sync_store(request: pytest.FixtureRequest) -> Iterator[BaseStore]:
 
 @pytest.fixture(
     scope="function",
-    params=["in_memory", "postgres_aio", "postgres_aio_pipe", "postgres_aio_pool"],
+    params=ASYNC_STORE_PARAMS,
 )
 async def async_store(request: pytest.FixtureRequest) -> AsyncIterator[BaseStore]:
     store_name = request.param
@@ -103,13 +146,7 @@ async def async_store(request: pytest.FixtureRequest) -> AsyncIterator[BaseStore
 
 @pytest.fixture(
     scope="function",
-    params=[
-        "memory",
-        "sqlite",
-        "postgres",
-        "postgres_pipe",
-        "postgres_pool",
-    ],
+    params=SYNC_CHECKPOINTER_PARAMS,
 )
 def sync_checkpointer(
     request: pytest.FixtureRequest,
@@ -136,13 +173,7 @@ def sync_checkpointer(
 
 @pytest.fixture(
     scope="function",
-    params=[
-        "memory",
-        "sqlite_aio",
-        "postgres_aio",
-        "postgres_aio_pipe",
-        "postgres_aio_pool",
-    ],
+    params=ASYNC_CHECKPOINTER_PARAMS,
 )
 async def async_checkpointer(
     request: pytest.FixtureRequest,

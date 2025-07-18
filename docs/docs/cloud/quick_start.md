@@ -20,7 +20,7 @@ To deploy an application to **LangGraph Platform**, your application code must r
 ## 2. Deploy to LangGraph Platform
 
 1. Log in to [LangSmith](https://smith.langchain.com/).
-1. In the left sidebar, select **LangGraph Platform**.
+1. In the left sidebar, select **Deployments**.
 1. Click the **+ New Deployment** button. A pane will open where you can fill in the required fields.
 1. If you are a first time user or adding a private repository that has not been previously connected, click the **Import from GitHub** button and follow the instructions to connect your GitHub account.
 1. Select your New LangGraph Project repository.
@@ -154,8 +154,9 @@ You can now test the API:
 
     ```bash
     curl -s --request POST \
-        --url <DEPLOYMENT_URL> \
+        --url <DEPLOYMENT_URL>/runs/stream \
         --header 'Content-Type: application/json' \
+        --header "X-Api-Key: <LANGSMITH API KEY> \
         --data "{
             \"assistant_id\": \"agent\",
             \"input\": {

@@ -14,7 +14,7 @@ Starting with the existing code from the [Add memory to the chatbot](./3-add-mem
 
 Let's first select a chat model:
 
-{!snippets/chat_model_tabs.md!}
+{% include-markdown "../../../snippets/chat_model_tabs.md" %}
 
 <!---
 ```python
@@ -78,7 +78,7 @@ graph_builder.add_edge(START, "chatbot")
 
 !!! tip
 
-    For more information and examples of human-in-the-loop workflows, see [Human-in-the-loop](../../concepts/human_in_the_loop.md). This includes how to [review and edit tool calls](../../how-tos/human_in_the_loop/review-tool-calls.ipynb) before they are executed.
+    For more information and examples of human-in-the-loop workflows, see [Human-in-the-loop](../../concepts/human_in_the_loop.md).
 
 ## 2. Compile the graph
 
@@ -221,7 +221,7 @@ The input has been received and processed as a tool message. Review this call's 
 
 Check out the code snippet below to review the graph from this tutorial:
 
-{!snippets/chat_model_tabs.md!}
+{% include-markdown "../../../snippets/chat_model_tabs.md" %}
 
 ```python
 from typing import Annotated

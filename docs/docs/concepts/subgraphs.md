@@ -12,7 +12,7 @@ Some reasons for using subgraphs are:
 
 The main question when adding subgraphs is how the parent graph and subgraph communicate, i.e. how they pass the [state](./low_level.md#state) between each other during the graph execution. There are two scenarios:
 
-* parent and subgraph have **shared state keys** in their state [schemas](./low_level.md#state). In this case, you can [include the subgraph as a node in the parent graph](../how-tos/subgraph.ipynb#shared-state-schemas)
+* parent and subgraph have **shared state keys** in their state [schemas](./low_level.md#state). In this case, you can [include the subgraph as a node in the parent graph](../how-tos/subgraph.md#shared-state-schemas)
 
     ```python
     from langgraph.graph import StateGraph, MessagesState, START
@@ -40,7 +40,7 @@ The main question when adding subgraphs is how the parent graph and subgraph com
     graph.invoke({"messages": [{"role": "user", "content": "hi!"}]})
     ```
 
-* parent graph and subgraph have **different schemas** (no shared state keys in their state [schemas](./low_level.md#state)). In this case, you have to [call the subgraph from inside a node in the parent graph](../how-tos/subgraph.ipynb#different-state-schemas): this is useful when the parent graph and the subgraph have different state schemas and you need to transform state before or after calling the subgraph
+* parent graph and subgraph have **different schemas** (no shared state keys in their state [schemas](./low_level.md#state)). In this case, you have to [call the subgraph from inside a node in the parent graph](../how-tos/subgraph.md#different-state-schemas): this is useful when the parent graph and the subgraph have different state schemas and you need to transform state before or after calling the subgraph
 
     ```python
     from typing_extensions import TypedDict, Annotated
@@ -59,8 +59,9 @@ The main question when adding subgraphs is how the parent graph and subgraph com
         response = model.invoke(state["subgraph_messages"])
         return {"subgraph_messages": response}
 
-    subgraph_builder = StateGraph(State)
-    subgraph_builder.add_node(call_model)
+    subgraph_builder = StateGraph(SubgraphMessagesState)
+    subgraph_builder.add_node("call_model_from_subgraph", call_model)
+    subgraph_builder.add_edge(START, "call_model_from_subgraph")
     ...
     # highlight-next-line
     subgraph = subgraph_builder.compile()

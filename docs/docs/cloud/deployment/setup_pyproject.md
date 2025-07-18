@@ -56,22 +56,27 @@ cloudpickle>=3.0.0
 Example `pyproject.toml` file:
 
 ```toml
-[tool.poetry]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
 name = "my-agent"
 version = "0.0.1"
 description = "An excellent agent build for LangGraph Platform."
-authors = ["Polly the parrot <1223+polly@users.noreply.github.com>"]
-license = "MIT"
+authors = [
+    {name = "Polly the parrot", email = "1223+polly@users.noreply.github.com"}
+]
+license = {text = "MIT"}
 readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "langgraph>=0.2.0",
+    "langchain-fireworks>=0.1.3"
+]
 
-[tool.poetry.dependencies]
-python = ">=3.9"
-langgraph = "^0.2.0"
-langchain-fireworks = "^0.1.3"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[tool.hatch.build.targets.wheel]
+packages = ["my_agent"]
 ```
 
 Example file directory:
@@ -103,7 +108,7 @@ my-app/
 
 ## Define Graphs
 
-Implement your graphs! Graphs can be defined in a single file or multiple files. Make note of the variable names of each [CompiledGraph][langgraph.graph.graph.CompiledGraph] to be included in the LangGraph application. The variable names will be used later when creating the [LangGraph configuration file](../reference/cli.md#configuration-file).
+Implement your graphs! Graphs can be defined in a single file or multiple files. Make note of the variable names of each [CompiledStateGraph][langgraph.graph.state.CompiledStateGraph] to be included in the LangGraph application. The variable names will be used later when creating the [LangGraph configuration file](../reference/cli.md#configuration-file).
 
 Example `agent.py` file, which shows how to import from other modules you define (code for the modules is not shown here, please see [this repository](https://github.com/langchain-ai/langgraph-example-pyproject) to see their implementation):
 
@@ -136,9 +141,6 @@ workflow.add_edge("action", "agent")
 
 graph = workflow.compile()
 ```
-
-!!! warning "Assign `CompiledGraph` to Variable"
-    The build process for LangGraph Platform requires that the `CompiledGraph` object be assigned to a variable at the top-level of a Python module.
 
 Example file directory:
 

@@ -11,25 +11,28 @@ all: help
 
 OUTPUT ?= out/benchmark.json
 
+install:  ## Install dependencies
+	uv sync --frozen --all-extras --all-packages --group dev
+
 benchmark:
 	mkdir -p out
 	rm -f $(OUTPUT)
-	poetry run python -m bench -o $(OUTPUT) --rigorous
+	uv run python -m bench -o $(OUTPUT) --rigorous
 
 benchmark-fast:
 	mkdir -p out
 	rm -f $(OUTPUT)
-	poetry run python -m bench -o $(OUTPUT) --fast
+	uv run python -m bench -o $(OUTPUT) --fast
 
 GRAPH ?= bench/fanout_to_subgraph.py
 
 profile:
 	mkdir -p out
-	sudo poetry run py-spy record -g -o out/profile.svg -- python $(GRAPH)
+	sudo uv run py-spy record -g -o out/profile.svg -- python $(GRAPH)
 
 # Run unit tests and generate a coverage report.
 coverage:
-	poetry run pytest --cov \
+	uv run pytest --cov \
 		--cov-config=.coveragerc \
 		--cov-report xml \
 		--cov-report term-missing:skip-covered
@@ -41,9 +44,8 @@ stop-postgres:
 	docker compose -f tests/compose-postgres.yml down -v
 
 start-dev-server:
-	poetry run langgraph dev --config tests/example_app/langgraph.json --no-browser &
+	LOG_LEVEL=warning uv run langgraph dev --config tests/example_app/langgraph.json --no-browser & echo "$$!" > .devserver.pid
 	@echo "Dev server started."
-	@echo "Dev server PID: $$!" > .devserver.pid
 
 stop-dev-server:
 	@if [ -f .devserver.pid ]; then \
@@ -54,27 +56,34 @@ stop-dev-server:
 	fi
 
 TEST ?= .
+NO_DOCKER ?= $(sh command -v docker >/dev/null 2>&1 && echo "false" || echo "true")
 
 test:
-	make start-postgres &&\
-	make start-dev-server &&\
-	poetry run pytest $(TEST); \
-	EXIT_CODE=$$?; \
-	make stop-postgres; \
-	make stop-dev-server; \
-	exit $$EXIT_CODE
+	if [ "$(NO_DOCKER)" = "false" ]; then \
+		make start-postgres &&\
+		make start-dev-server &&\
+		uv run pytest $(TEST); \
+		EXIT_CODE=$$?; \
+		make stop-postgres; \
+		make stop-dev-server; \
+		exit $$EXIT_CODE; \
+	else \
+		NO_DOCKER=true uv run pytest $(TEST) ; \
+		EXIT_CODE=$$?; \
+		exit $$EXIT_CODE; \
+	fi
 
 test_parallel:
 	make start-postgres &&\
 	make start-dev-server &&\
-	poetry run pytest -n auto --dist worksteal $(TEST); \
+	uv run pytest -n auto --dist worksteal $(TEST); \
 	EXIT_CODE=$$?; \
 	make stop-postgres; \
 	make stop-dev-server; \
 	exit $$EXIT_CODE
 
 integration_tests:
-	poetry run pytest integration_tests
+	uv run pytest integration_tests
 
 WORKERS ?= auto
 XDIST_ARGS := $(if $(WORKERS),-n $(WORKERS) --dist worksteal,)
@@ -86,7 +95,7 @@ XDIST_ARGS := $(if $(WORKERS),-x $(XDIST_ARGS),)
 test_watch:
 	make start-postgres &&\
 	make start-dev-server &&\
-	poetry run ptw . -- --ff -vv $(XDIST_ARGS) $(MAXFAIL_ARGS) $(TEST); \
+	uv run ptw . -- --ff -vv $(XDIST_ARGS) $(MAXFAIL_ARGS) $(TEST); \
 	EXIT_CODE=$$?; \
 	make stop-postgres; \
 	make stop-dev-server; \
@@ -110,21 +119,21 @@ lint_tests: PYTHON_FILES=tests
 lint_tests: MYPY_CACHE=.mypy_cache_test
 
 lint lint_diff lint_package lint_tests:
-	poetry run ruff check .
-	[ "$(PYTHON_FILES)" = "" ] || poetry run ruff format $(PYTHON_FILES) --diff
-	[ "$(PYTHON_FILES)" = "" ] || poetry run ruff check --select I $(PYTHON_FILES)
+	uv run ruff check .
+	[ "$(PYTHON_FILES)" = "" ] || uv run ruff format $(PYTHON_FILES) --diff
+	[ "$(PYTHON_FILES)" = "" ] || uv run ruff check --select I $(PYTHON_FILES)
 	[ "$(PYTHON_FILES)" = "" ] || mkdir -p $(MYPY_CACHE)
-	[ "$(PYTHON_FILES)" = "" ] || poetry run mypy langgraph --cache-dir $(MYPY_CACHE)
+	[ "$(PYTHON_FILES)" = "" ] || uv run mypy langgraph --cache-dir $(MYPY_CACHE)
 
 format format_diff:
-	poetry run ruff format $(PYTHON_FILES)
-	poetry run ruff check --select I --fix $(PYTHON_FILES)
+	uv run ruff format $(PYTHON_FILES)
+	uv run ruff check --select I --fix $(PYTHON_FILES)
 
 spell_check:
-	poetry run codespell --toml pyproject.toml
+	uv run codespell --toml pyproject.toml
 
 spell_fix:
-	poetry run codespell --toml pyproject.toml -w
+	uv run codespell --toml pyproject.toml -w
 
 
 ######################

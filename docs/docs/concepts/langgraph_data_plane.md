@@ -9,7 +9,7 @@ The term "data plane" is used broadly to refer to [LangGraph Servers](./langgrap
 
 ## Server Infrastructure
 
-In addition to the [LangGraph Server](./langgraph_server.md) itself, the following infrastructure for each server are also included in the broad definition of "data plane":
+In addition to the [LangGraph Server](./langgraph_server.md) itself, the following infrastructure components for each server are also included in the broad definition of "data plane":
 
 - Postgres
 - Redis
@@ -44,11 +44,20 @@ All runs in a LangGraph Server are executed by a pool of background workers that
 
 ### Ephemeral metadata
 
-Runs in a LangGraph Server may be retried for specific failures (currently only for transient Postgres errors encountered during the run). In order to limit the number of retries (currently limited to 3 attempts per run) we record the attempt number in a Redis string when is picked up. This contains no run-specific info other than its ID, and expires after a short delay.
+Runs in a LangGraph Server may be retried for specific failures (currently only for transient Postgres errors encountered during the run). In order to limit the number of retries (currently limited to 3 attempts per run) we record the attempt number in a Redis string when it is picked up. This contains no run-specific info other than its ID, and expires after a short delay.
 
 ## Data Plane Features
 
 This section describes various features of the data plane.
+
+### Data Region
+
+!!! info "Only for Cloud SaaS"
+    Data regions are only applicable for [Cloud SaaS](../concepts/langgraph_cloud.md) deployments.
+
+Deployments can be created in 2 data regions: US and EU
+
+The data region for a deployment is implied by the data region of the LangSmith organization where the deployment is created. Deployments and the underlying database for the deployments cannot be migrated between data regions.
 
 ### Autoscaling
 
@@ -56,13 +65,13 @@ This section describes various features of the data plane.
 
 1. CPU utilization
 1. Memory utilization
-1. Number of pending (in progress) [runs](../cloud/concepts/runs.md)
+1. Number of pending (in progress) [runs](./assistants.md#execution)
 
 For CPU utilization, the autoscaler targets 75% utilization. This means the autoscaler will scale the number of containers up or down to ensure that CPU utilization is at or near 75%. For memory utilization, the autoscaler targets 75% utilization as well.
 
 For number of pending runs, the autoscaler targets 10 pending runs. For example, if the current number of containers is 1, but the number of pending runs in 20, the autoscaler will scale up the deployment to 2 containers (20 pending runs / 2 containers = 10 pending runs per container).
 
-Each metric is computed independently and the autoscaler will determine the scaling action based on the metric that results in the most number of containers.
+Each metric is computed independently and the autoscaler will determine the scaling action based on the metric that results in the largest number of containers.
 
 Scale down actions are delayed for 30 minutes before any action is taken. In other words, if the autoscaler decides to scale down a deployment, it will first wait for 30 minutes before scaling down. After 30 minutes, the metrics are recomputed and the deployment will scale down if the recomputed metrics result in a lower number of containers than the current number. Otherwise, the deployment remains scaled up. This "cool down" period ensures that deployments do not scale up and down too frequently.
 

@@ -45,9 +45,9 @@ The first thing you do when you define a graph is define the `State` of the grap
 
 ### Schema
 
-The main documented way to specify the schema of a graph is by using `TypedDict`. However, we also support [using a Pydantic BaseModel](../how-tos/graph-api.ipynb#use-pydantic-models-for-graph-state) as your graph state to add **default values** and additional data validation.
+The main documented way to specify the schema of a graph is by using a [`TypedDict`](https://docs.python.org/3/library/typing.html#typing.TypedDict). If you want to provide default values in your state, use a [`dataclass`](https://docs.python.org/3/library/dataclasses.html). We also support using a Pydantic [BaseModel](../how-tos/graph-api.md#use-pydantic-models-for-graph-state) as your graph state if you want recursive data validation (though note that pydantic is less performant than a `TypedDict` or `dataclass`).
 
-By default, the graph will have the same input and output schemas. If you want to change this, you can also specify explicit input and output schemas directly. This is useful when you have a lot of keys, and some are explicitly for input and others for output. See the [guide here](../how-tos/graph-api.ipynb#define-input-and-output-schemas) for how to use.
+By default, the graph will have the same input and output schemas. If you want to change this, you can also specify explicit input and output schemas directly. This is useful when you have a lot of keys, and some are explicitly for input and others for output. See the [guide here](../how-tos/graph-api.md#define-input-and-output-schemas) for how to use.
 
 #### Multiple schemas
 
@@ -56,9 +56,9 @@ Typically, all graph nodes communicate with a single schema. This means that the
 - Internal nodes can pass information that is not required in the graph's input / output.
 - We may also want to use different input / output schemas for the graph. The output might, for example, only contain a single relevant output key.
 
-It is possible to have nodes write to private state channels inside the graph for internal node communication. We can simply define a private schema, `PrivateState`. See [this guide](../how-tos/graph-api.ipynb#pass-private-state-between-nodes) for more detail.
+It is possible to have nodes write to private state channels inside the graph for internal node communication. We can simply define a private schema, `PrivateState`. See [this guide](../how-tos/graph-api.md#pass-private-state-between-nodes) for more detail.
 
-It is also possible to define explicit input and output schemas for a graph. In these cases, we define an "internal" schema that contains _all_ keys relevant to graph operations. But, we also define `input` and `output` schemas that are sub-sets of the "internal" schema to constrain the input and output of the graph. See [this guide](../how-tos/graph-api.ipynb#define-input-and-output-schemas) for more detail.
+It is also possible to define explicit input and output schemas for a graph. In these cases, we define an "internal" schema that contains _all_ keys relevant to graph operations. But, we also define `input` and `output` schemas that are sub-sets of the "internal" schema to constrain the input and output of the graph. See [this guide](../how-tos/graph-api.md#define-input-and-output-schemas) for more detail.
 
 Let's look at an example:
 
@@ -89,7 +89,7 @@ def node_3(state: PrivateState) -> OutputState:
     # Read from PrivateState, write to OutputState
     return {"graph_output": state["bar"] + " Lance"}
 
-builder = StateGraph(OverallState,input=InputState,output=OutputState)
+builder = StateGraph(OverallState,input_schema=InputState,output_schema=OutputState)
 builder.add_node("node_1", node_1)
 builder.add_node("node_2", node_2)
 builder.add_node("node_3", node_3)
@@ -105,9 +105,9 @@ graph.invoke({"user_input":"My"})
 
 There are two subtle and important points to note here:
 
-1. We pass `state: InputState` as the input schema to `node_1`. But, we write out to `foo`, a channel in `OverallState`. How can we write out to a state channel that is not included in the input schema? This is because a node _can write to any state channel in the graph state._ The graph state is the union of of the state channels defined at initialization, which includes `OverallState` and the filters `InputState` and `OutputState`.
+1. We pass `state: InputState` as the input schema to `node_1`. But, we write out to `foo`, a channel in `OverallState`. How can we write out to a state channel that is not included in the input schema? This is because a node _can write to any state channel in the graph state._ The graph state is the union of the state channels defined at initialization, which includes `OverallState` and the filters `InputState` and `OutputState`.
 
-2. We initialize the graph with `StateGraph(OverallState,input=InputState,output=OutputState)`. So, how can we write to `PrivateState` in `node_2`? How does the graph gain access to this schema if it was not passed in the `StateGraph` initialization? We can do this because _nodes can also declare additional state channels_ as long as the state schema definition exists. In this case, the `PrivateState` schema is defined, so we can add `bar` as a new state channel in the graph and write to it.
+2. We initialize the graph with `StateGraph(OverallState,input_schema=InputState,output_schema=OutputState)`. So, how can we write to `PrivateState` in `node_2`? How does the graph gain access to this schema if it was not passed in the `StateGraph` initialization? We can do this because _nodes can also declare additional state channels_ as long as the state schema definition exists. In this case, the `PrivateState` schema is defined, so we can add `bar` as a new state channel in the graph and write to it.
 
 ### Reducers
 
@@ -167,7 +167,7 @@ In addition to keeping track of message IDs, the `add_messages` function will al
 {"messages": [{"type": "human", "content": "message"}]}
 ```
 
-Since the state updates are always deserialized into LangChain `Messages` when using `add_messages`, you should use dot notation to access message attributes, like `state["messages"][-1].content`. Below is an example of a graph that uses `add_messages` as it's reducer function.
+Since the state updates are always deserialized into LangChain `Messages` when using `add_messages`, you should use dot notation to access message attributes, like `state["messages"][-1].content`. Below is an example of a graph that uses `add_messages` as its reducer function.
 
 ```python
 from langchain_core.messages import AnyMessage
@@ -197,19 +197,25 @@ In LangGraph, nodes are typically python functions (sync or async) where the **f
 Similar to `NetworkX`, you add these nodes to a graph using the [add_node][langgraph.graph.StateGraph.add_node] method:
 
 ```python
+from typing_extensions import TypedDict
+
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph
 
-builder = StateGraph(dict)
+class State(TypedDict):
+    input: str
+    results: str
+
+builder = StateGraph(State)
 
 
-def my_node(state: dict, config: RunnableConfig):
+def my_node(state: State, config: RunnableConfig):
     print("In node: ", config["configurable"]["user_id"])
     return {"results": f"Hello, {state['input']}!"}
 
 
 # The second argument is optional
-def my_other_node(state: dict):
+def my_other_node(state: State):
     return state
 
 
@@ -246,6 +252,54 @@ from langgraph.graph import END
 
 graph.add_edge("node_a", END)
 ```
+
+### Node Caching
+
+LangGraph supports caching of tasks/nodes based on the input to the node. To use caching:
+
+* Specify a cache when compiling a graph (or specifying an entrypoint)
+* Specify a cache policy for nodes. Each cache policy supports:
+    * `key_func` used to generate a cache key based on the input to a node, which defaults to a `hash` of the input with pickle.
+    * `ttl`, the time to live for the cache in seconds. If not specified, the cache will never expire.
+
+For example:
+
+```py
+import time
+from typing_extensions import TypedDict
+from langgraph.graph import StateGraph
+from langgraph.cache.memory import InMemoryCache
+from langgraph.types import CachePolicy
+
+
+class State(TypedDict):
+    x: int
+    result: int
+
+
+builder = StateGraph(State)
+
+
+def expensive_node(state: State) -> dict[str, int]:
+    # expensive computation
+    time.sleep(2)
+    return {"result": state["x"] * 2}
+
+
+builder.add_node("expensive_node", expensive_node, cache_policy=CachePolicy(ttl=3))
+builder.set_entry_point("expensive_node")
+builder.set_finish_point("expensive_node")
+
+graph = builder.compile(cache=InMemoryCache())
+
+print(graph.invoke({"x": 5}, stream_mode='updates'))  # (1)!
+[{'expensive_node': {'result': 10}}]
+print(graph.invoke({"x": 5}, stream_mode='updates'))  # (2)!
+[{'expensive_node': {'result': 10}, '__metadata__': {'cached': True}}]
+```
+
+1. First run takes two seconds to run (due to mocked expensive computation).
+2. Second run utilizes cache and returns quickly.
 
 ## Edges
 
@@ -352,7 +406,7 @@ def my_node(state: State) -> Command[Literal["my_other_node"]]:
 
     When returning `Command` in your node functions, you must add return type annotations with the list of node names the node is routing to, e.g. `Command[Literal["my_other_node"]]`. This is necessary for the graph rendering and tells LangGraph that `my_node` can navigate to `my_other_node`.
 
-Check out this [how-to guide](../how-tos/graph-api.ipynb#combine-control-flow-and-state-updates-with-command) for an end-to-end example of how to use `Command`.
+Check out this [how-to guide](../how-tos/graph-api.md#combine-control-flow-and-state-updates-with-command) for an end-to-end example of how to use `Command`.
 
 ### When should I use Command instead of conditional edges?
 
@@ -379,17 +433,17 @@ def my_node(state: State) -> Command[Literal["other_subgraph"]]:
 
 !!! important "State updates with `Command.PARENT`"
 
-    When you send updates from a subgraph node to a parent graph node for a key that's shared by both parent and subgraph [state schemas](#schema), you **must** define a [reducer](#reducers) for the key you're updating in the parent graph state. See this [example](../how-tos/graph-api.ipynb#navigate-to-a-node-in-a-parent-graph).
+    When you send updates from a subgraph node to a parent graph node for a key that's shared by both parent and subgraph [state schemas](#schema), you **must** define a [reducer](#reducers) for the key you're updating in the parent graph state. See this [example](../how-tos/graph-api.md#navigate-to-a-node-in-a-parent-graph).
 
 This is particularly useful when implementing [multi-agent handoffs](./multi_agent.md#handoffs).
 
-Check out [this guide](../how-tos/graph-api.ipynb#navigate-to-a-node-in-a-parent-graph) for detail.
+Check out [this guide](../how-tos/graph-api.md#navigate-to-a-node-in-a-parent-graph) for detail.
 
 ### Using inside tools
 
 A common use case is updating graph state from inside a tool. For example, in a customer support application you might want to look up customer information based on their account number or ID in the beginning of the conversation.
 
-Refer to [this guide](../how-tos/graph-api.ipynb#use-inside-tools) for detail.
+Refer to [this guide](../how-tos/graph-api.md#use-inside-tools) for detail.
 
 ### Human-in-the-loop
 
@@ -435,7 +489,7 @@ def node_a(state, config):
     ...
 ```
 
-See [this guide](../how-tos/graph-api.ipynb#add-runtime-configuration) for a full breakdown on configuration.
+See [this guide](../how-tos/graph-api.md#add-runtime-configuration) for a full breakdown on configuration.
 
 ### Recursion Limit
 
@@ -449,4 +503,4 @@ Read [this how-to](https://langchain-ai.github.io/langgraph/how-tos/recursion-li
 
 ## Visualization
 
-It's often nice to be able to visualize graphs, especially as they get more complex. LangGraph comes with several built-in ways to visualize graphs. See [this how-to guide](../how-tos/graph-api.ipynb#visualize-your-graph) for more info.
+It's often nice to be able to visualize graphs, especially as they get more complex. LangGraph comes with several built-in ways to visualize graphs. See [this how-to guide](../how-tos/graph-api.md#visualize-your-graph) for more info.

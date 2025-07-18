@@ -47,7 +47,7 @@ LangGraph is a stateful, orchestration framework that brings added control to ag
 
 No. LangGraph Platform is proprietary software.
 
-There is a free, self-hosted version of LangGraph Platform with access to basic features. The Cloud SaaS deployment option is free while in beta, but will eventually be a paid service. We will always give ample notice before charging for a service and reward our early adopters with preferential pricing. The Self-Hosted deployment options are paid services. [Contact our sales team](https://www.langchain.com/contact-sales) to learn more.
+There is a free, self-hosted version of LangGraph Platform with access to basic features. The Cloud SaaS deployment option and the Self-Hosted deployment options are paid services. [Contact our sales team](https://www.langchain.com/contact-sales) to learn more.
 
 For more information, see our [LangGraph Platform pricing page](https://www.langchain.com/pricing-langgraph-platform).
 
@@ -59,8 +59,12 @@ Yes! You can use LangGraph with any LLMs. The main reason we use LLMs that suppo
 
 Yes! LangGraph is totally ambivalent to what LLMs are used under the hood. The main reason we use closed LLMs in most of the tutorials is that they seamlessly support tool calling, while OSS LLMs often don't. But tool calling is not necessary (see [this section](#does-langgraph-work-with-llms-that-dont-support-tool-calling)) so you can totally use LangGraph with OSS LLMs.
 
-## Can I use LangGraph Studio without logging to LangSmith
+## Can I use LangGraph Studio without logging in to LangSmith
 
 Yes! You can use the [development version of LangGraph Server](../tutorials/langgraph-platform/local-server.md) to run the backend locally.
 This will connect to the studio frontend hosted as part of LangSmith.
-If you set an environment variable of `LANGSMITH_TRACING=false` then no traces will be sent to LangSmith.
+If you set an environment variable of `LANGSMITH_TRACING=false`, then no traces will be sent to LangSmith.
+
+## What does "nodes executed" mean for LangGraph Platform usage?
+
+**Nodes Executed** is the aggregate number of nodes in a LangGraph application that are called and completed successfully during an invocation of the application. If a node in the graph is not called during execution or ends in an error state, these nodes will not be counted. If a node is called and completes successfully multiple times, each occurrence will be counted.

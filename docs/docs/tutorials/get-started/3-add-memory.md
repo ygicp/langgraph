@@ -154,7 +154,7 @@ The snapshot above contains the current state values, corresponding config, and 
   
 Check out the code snippet below to review the graph from this tutorial:
 
-{!snippets/chat_model_tabs.md!}
+{% include-markdown "../../../snippets/chat_model_tabs.md" %}
 
 <!---
 ```python
@@ -164,7 +164,7 @@ llm = init_chat_model("anthropic:claude-3-5-sonnet-latest")
 ```
 -->
 
-```python
+```python hl_lines="36 37"
 from typing import Annotated
 
 from langchain.chat_models import init_chat_model
